@@ -91,82 +91,81 @@ faq_retriever = VectorStoreRetriever.from_docs(electricity_faq_docs, openai.Clie
 
 
 # Initialize Qdrant client
-# qdrant_client = QdrantClient(url=os.getenv("QDRANT_URL"))
+qdrant_client = QdrantClient(url=os.getenv("QDRANT_URL"))
 
 # Create a collection in Qdrant
-# def create_qdrant_collection(collection_name: str, vector_size: int):
-#     try:
-#         qdrant_client.create_collection(
-#             collection_name=collection_name,
-#             vectors_config={"size": vector_size, "distance": "Cosine"}
-#         )
-#     except Exception as e:
-#         print(f"Failed to create collection {collection_name}: {e}")
+def create_qdrant_collection(collection_name: str, vector_size: int):
+    try:
+        qdrant_client.create_collection(
+            collection_name=collection_name,
+            vectors_config={"size": vector_size, "distance": "Cosine"}
+        )
+    except Exception as e:
+        print(f"Failed to create collection {collection_name}: {e}")
 
-# # Insert documents into Qdrant
-# def insert_documents_to_qdrant(collection_name: str, docs: list, vectors: list):
-#     points = [
-#         PointStruct(id=uuid.uuid4().hex, vector=vector, payload={"page_content": doc["page_content"]})
-#         for doc, vector in zip(docs, vectors)
-#     ]
-#     qdrant_client.upsert(collection_name=collection_name, points=points)
+# Insert documents into Qdrant
+def insert_documents_to_qdrant(collection_name: str, docs: list, vectors: list):
+    points = [
+        PointStruct(id=uuid.uuid4().hex, vector=vector, payload={"page_content": doc["page_content"]})
+        for doc, vector in zip(docs, vectors)
+    ]
+    qdrant_client.upsert(collection_name=collection_name, points=points)
 
-# # Query Qdrant for similar documents
-# def query_qdrant(collection_name: str, query_vector: list, k: int = 5) -> list[dict]:
-#     search_result = qdrant_client.search(
-#         collection_name=collection_name,
-#         query_vector=query_vector,
-#         limit=k
-#     )
-#     return [
-#         {"page_content": hit.payload["page_content"], "similarity": hit.score}
-#         for hit in search_result
-#     ]
+# Query Qdrant for similar documents
+def query_qdrant(collection_name: str, query_vector: list, k: int = 5) -> list[dict]:
+    search_result = qdrant_client.search(
+        collection_name=collection_name,
+        query_vector=query_vector,
+        limit=k
+    )
+    return [
+        {"page_content": hit.payload["page_content"], "similarity": hit.score}
+        for hit in search_result
+    ]
 
 # Create Qdrant collection and insert documents
 # Check if the collection exists before creating it
-# collection_name = "faq_collection"
+collection_name = "faq_collection"
 
-# try:
-#     qdrant_client.get_collection(collection_name)
-# except Exception as e:
-#     # logger.info(f"Collection {self._collection_name} not found. Creating a new one.")
-#     qdrant_client.create_collection(
-#         collection_name=collection_name,
-#         vectors_config={
-#             "size": 1536,
-#             "distance": "Cosine"
-#         }
-#     )
+try:
+    qdrant_client.get_collection(collection_name)
+except Exception as e:
+    # logger.info(f"Collection {self._collection_name} not found. Creating a new one.")
+    qdrant_client.create_collection(
+        collection_name=collection_name,
+        vectors_config={
+            "size": 1536,
+            "distance": "Cosine"
+        }
+    )
 
 # Update VectorStoreRetriever to use Qdrant
-# class QdrantVectorStoreRetriever(VectorStoreRetriever):
-#     def __init__(self, docs: list, oai_client, collection_name: str):
-#         self._docs = docs
-#         self._client = oai_client
-#         self._collection_name = collection_name
+class QdrantVectorStoreRetriever(VectorStoreRetriever):
+    def __init__(self, docs: list, oai_client, collection_name: str):
+        self._docs = docs
+        self._client = oai_client
+        self._collection_name = collection_name
 
-#     @classmethod
-#     def from_docs(cls, docs, oai_client, collection_name: str):
-#         embeddings = oai_client.embeddings.create(
-#             model="text-embedding-3-small", input=[doc["page_content"] for doc in docs]
-#         )
-#         vectors = [emb.embedding for emb in embeddings.data]
-#         insert_documents_to_qdrant(collection_name, docs, vectors)
-#         return cls(docs, oai_client, collection_name)
+    @classmethod
+    def from_docs(cls, docs, oai_client, collection_name: str):
+        embeddings = oai_client.embeddings.create(
+            model="text-embedding-3-small", input=[doc["page_content"] for doc in docs]
+        )
+        vectors = [emb.embedding for emb in embeddings.data]
+        insert_documents_to_qdrant(collection_name, docs, vectors)
+        return cls(docs, oai_client, collection_name)
 
-#     def query(self, query: str, k: int = 5) -> list[dict]:
-#         embed = self._client.embeddings.create(
-#             model="text-embedding-3-small", input=[query]
-#         )
-#         query_vector = embed.data[0].embedding
-#         return query_qdrant(self._collection_name, query_vector, k)
-
-
-# insert_documents_to_qdrant(collection_name, docs, retriever._arr.tolist())
+    def query(self, query: str, k: int = 5) -> list[dict]:
+        embed = self._client.embeddings.create(
+            model="text-embedding-3-small", input=[query]
+        )
+        query_vector = embed.data[0].embedding
+        return query_qdrant(self._collection_name, query_vector, k)
 
 # Use QdrantVectorStoreRetriever
-# qdrant_retriever = QdrantVectorStoreRetriever.from_docs(electricity_faq_docs, openai.Client(), "faq_collection")
+qdrant_retriever = QdrantVectorStoreRetriever.from_docs(electricity_faq_docs, openai.Client(), "faq_collection")
+
+insert_documents_to_qdrant(collection_name, electricity_faq_docs, qdrant_client._arr.tolist())
 
 
 @tool
